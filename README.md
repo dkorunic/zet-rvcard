@@ -137,6 +137,138 @@ Registered applications of interest (AID → meaning):
   the decoder can point at the current-balance ciphertext (`balance blob`, the
   latest slot's 16 bytes) but cannot decode it without the issuer key.
 
+## Layout and update diagrams
+
+Same findings as above, drawn out. Mermaid renders on GitHub/GitLab; the ASCII
+versions are for plain-text viewers. Everything here is the plaintext layout and
+the read-only before/after behaviour — no sealed values, no write recipes.
+
+### Whole-card memory map
+
+MIFARE Classic 1K is a fixed grid: 16 sectors × 4 blocks = 64 blocks = 1024 bytes.
+Each sector's last block is its trailer (keys A/B + access bits).
+
+```
+ Sector  Blocks           AID       Role
+ ─────────────────────────────────────────────────────────────────────
+   0      0   1   2  [ 3]  —         UID + manufacturer, MAD directory
+   1      4   5   6  [ 7]  0x0004    Card-holder info (RLC: name, sex, …)
+   2      8   9  10  [11]  0x0015    Card publisher — MIKROELEKTRONIKA
+   3     12  13  14  [15]  0x887B    Purse: issue records
+   4     16  17  18  [19]  0x887B    Purse: event counter (value blocks)
+   5     20  21  22  [23]  0x887B    Purse: record slot
+   6     24  25  26  [27]  0x887B    Purse: record slot
+   7     28  29  30  [31]  0x2062    E-ticket: fare counters / slot-6 index
+   8     32  33  34  [35]  0x2062    E-ticket: slot-5 index
+  9-15   36 ……………… 63      varies    Coupon / profile (card B) or unused
+ ─────────────────────────────────────────────────────────────────────
+   [n] = sector trailer      Purse application = sectors 3–6 (AID 0x887B)
+```
+
+### Purse application structure (AID `0x887B`)
+
+```mermaid
+graph TD
+    PURSE["Purse application<br/>AID 0x887B · sectors 3-6"]
+    PURSE --> S3["Sector 3<br/>issue records<br/>(+ checksum/MAC)"]
+    PURSE --> S4["Sector 4<br/>event counter"]
+    PURSE --> S5["Sector 5<br/>record slot"]
+    PURSE --> S6["Sector 6<br/>record slot"]
+
+    S4 --> B17["blk 17 — value = 2^31 − N"]
+    S4 --> B18["blk 18 — mirror of blk 17"]
+
+    S5 --> B20["blk 20 — 16-byte blob (sealed value)"]
+    S5 --> B21["blk 21 — payload (era, session, type flag)"]
+    S5 --> B22["blk 22 — header (tag, writer data, crypto tail)"]
+
+    S6 --> B24["blk 24 — 16-byte blob (sealed value)"]
+    S6 --> B25["blk 25 — payload"]
+    S6 --> B26["blk 26 — header"]
+```
+
+### Event counter (sector 4, blocks 17 & 18)
+
+Two identical MIFARE value blocks. The chip refuses write and increment for every
+key and only accepts the one decrement that logs the next transaction, so `N` is
+monotonic — a one-way, anti-rollback counter. It counts transactions; it is not a
+balance.
+
+```
+ blk 17 = blk 18 :
+   A4 FF FF 7F | 5B 00 00 80 | A4 FF FF 7F | 11 EE 11 EE
+   └ value LE ┘ └ ~value   ┘ └ value LE ┘ └ 0x11 ~ 0x11 ~ ┘
+      value = 0x7FFFFFA4 = 2^31 − 92        addr = block 17 (0x11)
+                              └─ N = 92
+
+   Each transaction: exactly one decrement (N → N+1),
+   e.g. value 0x7FFFFFA4 → 0x7FFFFFA3  ⇒  N 92 → 93.
+```
+
+### Record slot (sectors 5 and 6, 3 blocks = 48 bytes)
+
+The card keeps the last two transactions, one per slot. Only the payload block is
+readable metadata; the blob is sealed and the header's tail is per-transaction
+crypto.
+
+```
+ ┌──────────────────────────────────────────────────────────────┐
+ │ blk +0  BLOB      16 bytes  SEALED under issuer key            │ amount /
+ │                   holds amount · balance · event              │ balance /
+ │                   not readable card-side, in any encoding      │ event live
+ ├──────────────────────────────────────────────────────────────┤ here — and
+ │ blk +1  PAYLOAD   readable metadata                           │ nowhere in
+ │   [0]      era marker                                          │ plaintext
+ │   [1-2]    slot constant                                       │
+ │   [3-11]   era + slot constants (fixed per slot / era)         │
+ │   [4-5]      era/date field  0x2032 (2026-10-29) · 0xD405 old  │
+ │   [12-14]  session token      (rotates on every write)         │
+ │   [15]     type flag          0x34 top-up · 0x35 fare          │
+ ├──────────────────────────────────────────────────────────────┤
+ │ blk +2  HEADER                                                │
+ │   [0-2]    tag           D4 05 02                              │
+ │   [3-7]    writer data   kiosk/validator id · time?           │
+ │   [8-15]   per-transaction crypto tail                        │
+ └──────────────────────────────────────────────────────────────┘
+   slot in sector 5 → blocks 20·21·22      slot in sector 6 → 24·25·26
+```
+
+### Slot rotation
+
+The newest record alternates between the two slots with the event counter's
+parity, so the card always holds exactly the last two transactions.
+
+```
+ counter N   parity   newest slot   older slot
+ ───────────────────────────────────────────────
+   91         odd          6             5
+   92         even         5             6
+   93         odd          6             5
+ ───────────────────────────────────────────────
+ Rule (hypothesis, holds on all observed states, both cards):
+   odd  → newest in sector 6
+   even → newest in sector 5
+```
+
+### What one genuine transaction changes
+
+The before/after method behind every finding. A legitimate transaction touches
+only the counter and the newly written slot — plus the sector-7 fare counters for
+a fare. Anything else changing would be a red flag.
+
+```mermaid
+flowchart TD
+    T["Genuine transaction<br/>kiosk top-up or bus fare"]
+    T --> C["Event counter: one decrement<br/>N → N+1 on blk 17 and mirror blk 18"]
+    C --> P["New counter parity selects the target slot"]
+    P --> W["Rewrite that slot (5 ↔ 6):<br/>blob + payload + header<br/>session token rotates, type flag set"]
+    W --> F{"fare?"}
+    F -->|yes| S7["Also update sector-7 fare counters<br/>(blocks 28-30)"]
+    F -->|no| END["done — one transaction, +1 on the counter"]
+    S7 --> END
+```
+
+
 ## Test data
 
 `--selftest` asserts against five reference dumps
