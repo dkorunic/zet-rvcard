@@ -1,0 +1,163 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="610" viewBox="0 0 900 610" role="img" tabindex="0" aria-labelledby="title description">
+  <title id="title">ZET card block changes: baseline, two top-ups, then a fare</title>
+  <desc id="description">Four card-A snapshots from 2026-10-29 loop every 12 seconds. Baseline N=90 selects sector 5 by parity hypothesis only. Top-up 91 changes blocks 17, 18, 24, 25, 26. Top-up 92 changes blocks 17, 18, 20, 21, 22. Fare 93 changes blocks 17, 18, 24, 25, 26, 28, 29, 30, including block 28 byte 5. Both mirrored stored counter values decrease by one in each captured transition. Outlines mark blocks with any changed bytes, not a measured write order. Balance and currency encoding remain unknown; opaque bytes do not establish encryption. Other blocks stay unchanged in this sequence. Reduced motion shows the baseline; the README table describes every frame. Open directly and hover or focus to pause.</desc>
+  <style>
+    svg {
+      color-scheme: light;
+      --surface: #fcfcfb; --cell: #ffffff; --ink: #0b0b0b;
+      --secondary: #52514e; --border: #d7d6d0; --track: #e1e0d9;
+      --topup: #2a78d6; --fare: #eb6834;
+    }
+    @media (prefers-color-scheme: dark) {
+      svg {
+        color-scheme: dark;
+        --surface: #1a1a19; --cell: #242423; --ink: #f0efec;
+        --secondary: #c3c2b7; --border: #484845; --track: #383835;
+        --topup: #3987e5; --fare: #d95926;
+      }
+    }
+    text { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; fill: var(--ink); font-size: 12px; }
+    .secondary { fill: var(--secondary); }
+    .heading { font-size: 13px; font-weight: 600; }
+    .event { font-size: 15px; font-weight: 600; }
+    .counter { font-size: 16px; font-weight: 600; }
+    .topup { fill: var(--topup); fill-opacity: .10; stroke: var(--topup); stroke-width: 2; }
+    .fare { fill: var(--fare); fill-opacity: .10; stroke: var(--fare); stroke-width: 2; stroke-dasharray: 6 3; }
+    svg:hover .frame, svg:focus .frame { animation-play-state: paused; }
+    .frame { opacity: 0; animation-duration: 12s; animation-timing-function: steps(1, end); animation-iteration-count: infinite; }
+    .w1 { opacity: 1; animation-name: w1; }
+    .w2 { animation-name: w2; }
+    .w3 { animation-name: w3; }
+    .w4 { animation-name: w4; }
+    @keyframes w1 { 0%, 100% { opacity: 1; } 25%, 75% { opacity: 0; } }
+    @keyframes w2 { 0%, 50%, 100% { opacity: 0; } 25% { opacity: 1; } }
+    @keyframes w3 { 0%, 25%, 75%, 100% { opacity: 0; } 50% { opacity: 1; } }
+    @keyframes w4 { 0%, 50%, 100% { opacity: 0; } 75% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .frame { animation: none; } }
+    @media print { .frame { animation: none; } }
+    @media (forced-colors: active) {
+      .topup, .fare { fill: none; stroke: CanvasText; }
+      .fare { stroke-dasharray: 6 3; }
+    }
+  </style>
+  <defs>
+    <rect id="cell" width="206" height="66" rx="6"/>
+  </defs>
+
+  <rect x="1" y="1" width="898" height="608" rx="10" fill="var(--surface)" stroke="var(--border)"/>
+  <text x="32" y="34" font-size="18" style="font-size:18px" font-weight="600">Three captured transactions, block by block</text>
+  <text x="32" y="54" class="secondary">Card A · 2026-10-29 · baseline → two kiosk top-ups → one bus fare</text>
+  <g fill="var(--track)">
+    <rect x="32" y="73" width="196" height="4" rx="2"/>
+    <rect x="244" y="73" width="196" height="4" rx="2"/>
+    <rect x="456" y="73" width="196" height="4" rx="2"/>
+    <rect x="668" y="73" width="196" height="4" rx="2"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="130" y="96">e90 · baseline</text>
+    <text x="342" y="96">e91 · top-up</text>
+    <text x="554" y="96">e92 · top-up</text>
+    <text x="766" y="96">e93 · fare</text>
+  </g>
+
+  <!-- Block backgrounds stay in place while highlights change. Trailers are omitted. -->
+  <g fill="var(--cell)" stroke="var(--border)">
+    <use href="#cell" x="214" y="168"/><use href="#cell" x="434" y="168"/><use href="#cell" x="654" y="168"/>
+    <use href="#cell" x="214" y="246"/><use href="#cell" x="434" y="246"/><use href="#cell" x="654" y="246"/>
+    <use href="#cell" x="214" y="324"/><use href="#cell" x="434" y="324"/><use href="#cell" x="654" y="324"/>
+    <use href="#cell" x="214" y="402"/><use href="#cell" x="434" y="402"/><use href="#cell" x="654" y="402"/>
+  </g>
+
+  <g class="frame w1" id="e90" data-changed-blocks="">
+    <rect x="32" y="73" width="196" height="4" rx="2" fill="var(--secondary)"/>
+    <text x="32" y="126" class="event">Baseline · event 90</text>
+    <text x="32" y="146" class="secondary">Reference state · sector 5 selected by parity hypothesis, not an observed write</text>
+    <text x="446" y="213" class="counter">N = 90</text><text x="666" y="213" class="counter">N = 90</text>
+    <text x="32" y="304" font-weight="600">Selected · hypothesis →</text>
+    <text x="32" y="530" class="secondary">Changed blocks: none · this is the reference snapshot</text>
+  </g>
+  <g class="frame w2" id="e91" data-changed-blocks="17 18 24 25 26">
+    <rect x="244" y="73" width="196" height="4" rx="2" fill="var(--topup)"/>
+    <text x="32" y="126" class="event">Kiosk top-up · event 90 → 91</text>
+    <text x="32" y="146" class="secondary">Stored value −1 in each counter block · sector 6 record rewritten · type 0x34</text>
+    <g class="topup">
+      <use href="#cell" x="434" y="168"/><use href="#cell" x="654" y="168"/>
+      <use href="#cell" x="214" y="324"/><use href="#cell" x="434" y="324"/><use href="#cell" x="654" y="324"/>
+    </g>
+    <text x="446" y="213" class="counter">N = 91</text><text x="666" y="213" class="counter">N = 91</text>
+    <text x="32" y="382" font-weight="600">Updated at e91 →</text>
+    <text x="32" y="530" class="secondary">Changed blocks: 17 · 18 · 24 · 25 · 26</text>
+  </g>
+  <g class="frame w3" id="e92" data-changed-blocks="17 18 20 21 22">
+    <rect x="456" y="73" width="196" height="4" rx="2" fill="var(--topup)"/>
+    <text x="32" y="126" class="event">Kiosk top-up · event 91 → 92</text>
+    <text x="32" y="146" class="secondary">Stored value −1 in each counter block · sector 5 record rewritten · type 0x34</text>
+    <g class="topup">
+      <use href="#cell" x="434" y="168"/><use href="#cell" x="654" y="168"/>
+      <use href="#cell" x="214" y="246"/><use href="#cell" x="434" y="246"/><use href="#cell" x="654" y="246"/>
+    </g>
+    <text x="446" y="213" class="counter">N = 92</text><text x="666" y="213" class="counter">N = 92</text>
+    <text x="32" y="304" font-weight="600">Updated at e92 →</text>
+    <text x="32" y="530" class="secondary">Changed blocks: 17 · 18 · 20 · 21 · 22</text>
+  </g>
+  <g class="frame w4" id="e93" data-changed-blocks="17 18 24 25 26 28 29 30">
+    <rect x="668" y="73" width="196" height="4" rx="2" fill="var(--fare)"/>
+    <text x="32" y="126" class="event">Bus fare · event 92 → 93</text>
+    <text x="32" y="146" class="secondary">Stored value −1 in each counter block · sector 6 record + sector 7 updated · type 0x35</text>
+    <g class="fare">
+      <use href="#cell" x="434" y="168"/><use href="#cell" x="654" y="168"/>
+      <use href="#cell" x="214" y="324"/><use href="#cell" x="434" y="324"/><use href="#cell" x="654" y="324"/>
+      <use href="#cell" x="214" y="402"/><use href="#cell" x="434" y="402"/><use href="#cell" x="654" y="402"/>
+    </g>
+    <text x="446" y="213" class="counter">N = 93</text><text x="666" y="213" class="counter">N = 93</text>
+    <text x="32" y="382" font-weight="600">Updated at e93 →</text>
+    <text x="32" y="530" class="secondary">Changed blocks: 17 · 18 · 24 · 25 · 26 · 28 · 29 · 30</text>
+  </g>
+
+  <!-- Labels are above the highlights so block identity is always readable. -->
+  <g>
+    <text x="32" y="190" class="heading">Sector 4 · counter</text>
+    <text x="32" y="210" class="secondary">Mirrored · event hypothesis</text>
+    <text x="226" y="190" class="heading">blk 16 · static data</text>
+    <text x="226" y="213" class="secondary">Unchanged in these dumps</text>
+    <text x="434" dx="12" y="190" class="heading">blk 17 · counter</text>
+    <text x="666" y="190" class="heading">blk 18 · mirror</text>
+
+    <text x="32" y="268" class="heading">Sector 5 · slot</text>
+    <text x="32" y="288" class="secondary">Changed at captured e92</text>
+    <text x="226" y="268" class="heading">blk 20 · opaque blob</text>
+    <text x="226" y="291" class="secondary">Contents not decoded</text>
+    <text x="446" y="268" class="heading">blk 21 · payload</text>
+    <text x="446" y="291" class="secondary">Raw era · token · type flag</text>
+    <text x="666" y="268" class="heading">blk 22 · header</text>
+    <text x="666" y="291" class="secondary">Raw prefix · opaque tail</text>
+
+    <text x="32" y="346" class="heading">Sector 6 · slot</text>
+    <text x="32" y="366" class="secondary">Changed at e91 and e93</text>
+    <text x="226" y="346" class="heading">blk 24 · opaque blob</text>
+    <text x="226" y="369" class="secondary">Contents not decoded</text>
+    <text x="446" y="346" class="heading">blk 25 · payload</text>
+    <text x="446" y="369" class="secondary">Raw era · token · type flag</text>
+    <text x="666" y="346" class="heading">blk 26 · header</text>
+    <text x="666" y="369" class="secondary">Raw prefix · opaque tail</text>
+
+    <text x="32" y="424" class="heading">Sector 7 · e-ticket</text>
+    <text x="32" y="444" class="secondary">Changed at captured e93</text>
+    <text x="226" y="424" class="heading">blk 28 · fare data</text>
+    <text x="226" y="447" class="secondary">e93: byte 5 + bytes 8–15</text>
+    <text x="446" y="424" class="heading">blk 29 · slot-6 link</text>
+    <text x="446" y="447" class="secondary">Token tracks slot 6 · flag</text>
+    <text x="666" y="424" class="heading">blk 30 · fare data</text>
+    <text x="666" y="447" class="secondary">Semantics still open</text>
+  </g>
+
+  <text x="32" y="488" class="secondary">N = 2³¹ − stored value · +1 in each captured transition · not a decoded balance</text>
+  <path d="M32 505h16" stroke="var(--topup)" stroke-width="3"/>
+  <text x="56" y="509">Top-up · changed blocks</text>
+  <path d="M294 505h16" stroke="var(--fare)" stroke-width="3" stroke-dasharray="6 3"/>
+  <text x="318" y="509">Fare · changed blocks</text>
+  <text x="554" y="509" class="secondary">No outline = unchanged in that step</text>
+  <text x="32" y="552" class="secondary">All other blocks, including trailers and sector 8, stay unchanged across these snapshots.</text>
+  <text x="32" y="573" font-weight="600">Balance unknown · currency, field location and protection scheme unresolved</text>
+  <text x="32" y="595" class="secondary">12 s loop · snapshots, not write order · hover/focus pauses when opened directly · table in README</text>
+</svg>

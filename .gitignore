@@ -1,2 +1,3 @@
-# reference dumps stay private — never commit card data
+# reference dumps/export stay private — never commit card data
 hf-mf-*.bin
+hf-mf-*.json
