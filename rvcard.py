@@ -163,7 +163,11 @@ def rv_record_slot(data: bytes, sector: int) -> dict:
     # 0x2032 in records written 2026-10-29 by BOTH the kiosk and the bus
     # validator. Date-counter vs system-era marker is unresolved, so we report
     # the raw value rather than naming an era (which would overclaim, and
-    # "kiosk-era" would be wrong — the validator wrote 0x2032 too).
+    # "kiosk-era" would be wrong — the validator wrote 0x2032 too). All four
+    # older records on two cards carry D4 05 02 here, identical to the header
+    # prefix, which argues against a per-transaction date.
+    # Payload [0:4] and [12:16] share a shape (3 ID-like bytes + 34/35/04 byte)
+    # and either can be referenced from S7/S8; "session token" is a label.
     era_field = f"0x{payload[4]:02X}{payload[5]:02X}"
     return {
         "era_field": era_field,
@@ -491,6 +495,25 @@ def _real_corpus_checks(dump_dir: str) -> None:
     assert b["slot_5"]["type_flag"] == 0x35 and b["slot_5"]["session_token"] == "03282E"
     assert b["slot_6"]["type_flag"] == 0x34 and b["slot_6"]["session_token"] == "EB2999"
     print("  PASS slot facts: era field, type flags (0x34/0x35), session tokens")
+
+    # E-ticket cross-reference (observed rule, not a grammar): S7 block 29[0:4]
+    # is an S6 payload word with 0x08 OR-ed into byte 3; S8 block 33[0:4] an S5
+    # payload word with 0x80. The source is payload [12:16], except card B's S8,
+    # which matches S5 payload [0:4].
+    def word(raw, blk, off):
+        return raw[blk * 16 + off:blk * 16 + off + 4]
+
+    def tagged(w, bit):
+        return w[:3] + bytes([w[3] | bit])
+
+    for fn, s8_off in (("hf-mf-14226CDA-dump.bin", 12), ("hf-mf-14226CDA-topup.bin", 12),
+                       ("hf-mf-14226CDA-topup2.bin", 12), ("hf-mf-14226CDA-fare1.bin", 12),
+                       ("hf-mf-5ED82083-dump.bin", 0)):
+        raw = load(fn)
+        assert word(raw, 29, 0) == tagged(word(raw, 25, 12), 0x08), f"{fn}: S7 xref"
+        assert word(raw, 33, 0) == tagged(word(raw, 21, s8_off), 0x80), f"{fn}: S8 xref"
+        assert word(raw, 33, 0) != tagged(word(raw, 21, 12 - s8_off), 0x80)
+    print("  PASS e-ticket cross-reference: S7=S6 word|0x08, S8=S5 word|0x80 (B: S5[0:4])")
 
     base_d, top_d = load("hf-mf-14226CDA-dump.bin"), load("hf-mf-14226CDA-topup.bin")
     for before, after, expected in (

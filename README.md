@@ -160,7 +160,7 @@ authentication.** The AID registry associates the following applications:
 | 3 | `887B` | Static purse data; issue-data interpretation provisional |
 | 4 | `887B` | Mirrored event-counter candidate, blocks 17/18 |
 | 5–6 | `887B` | Alternating 48-byte records |
-| 7–8 | `2062` | E-ticket data; tokens correspond to S6/S5 respectively |
+| 7–8 | `2062` | E-ticket data; first word cross-references an S6/S5 payload word |
 | B only: 9 | `1837` | Prepaid coupon |
 | B only: 10 | `071D` | Customer profile |
 | A: 9–15; B: 11–15 | free | Zero data blocks, transport keys |
@@ -212,16 +212,24 @@ graph TD
 | Record region | Observation |
 |---|---|
 | First block, 16 bytes | Opaque; changes at every captured write to that slot |
+| Payload bytes 0–3 | Three ID-like bytes plus a `34`/`35`/`04` byte; same shape as bytes 12–15 |
 | Payload bytes 4–5 | Raw `20 32` in new records, `D4 05` in older records |
-| Payload bytes 12–14 | Token preserved by both top-ups; S6 changes at the fare |
+| Payload bytes 12–14 | ID ("session token") preserved by both top-ups; S6 changes at the fare |
 | Payload byte 15 | `34` for the two captured top-ups, `35` for the captured fare |
 | Header bytes 0–2 | `D4 05 02` in all seven distinct records |
 | Header bytes 3–7 | Raw bytes; writer/time/line interpretations are unverified |
 | Header bytes 8–15 | Opaque; change at every captured transaction |
 
 “Era/date,” “session token” and “writer data” are descriptive names, not decoded
-semantics. A 2004-04-05 date epoch was chosen to fit one date; no observed daily
-progression establishes it. The type labels also rest on a small sample.
+semantics. The type labels also rest on a small sample.
+
+`D4 05` argues **against** a per-transaction date: all four older records (both
+slots on both cards) carry payload bytes 4–6 `D4 05 02`, identical to the
+constant header prefix. As write dates, that would mean four writes on one day
+across two cards with different histories. `D405` is more likely a sentinel or
+legacy-format value, and `2032` a value written by the terminals used on
+2026-10-29. A previously fitted 2004-04-05 epoch rests on one date and should
+not be used; a fare on another day would show whether `2032` moves.
 
 S6 payload bytes 0–11 are identical at the first top-up and the fare despite
 different reported balances. They cannot alone encode a deterministic current
@@ -237,14 +245,29 @@ verify freshness. The reader labels that selection as a hypothesis.
 
 At the one captured fare:
 
-- Block 28 byte **5** changes `3C → 44`, as well as bytes **8–15**.
-- Block 29 bytes 0–3 change `D4A9BF3C → 8DAA273D`; its first three bytes track
-  the S6 payload token.
+- Block 28 byte **5** changes `3C → 44`, as well as bytes **8–15**. That is
+  exactly +1 in bits 3–7 (7 → 8), low bits unchanged — a candidate fare/use
+  counter, hypothesis only. The next normal fare would predict `4C`.
+- Block 29 bytes 0–3 change `D4A9BF3C → 8DAA273D`: the S6 payload bytes 12–15
+  with `0x08` OR-ed into the last byte.
 - Block 30 changes offsets 1, 5, 6 and 9: `C5→BD`, `A1→51`, `06→03`, `04→02`.
   `C5→BD` is 197→189, **not halving**. Field boundaries and meanings are unknown.
 
 Sector 7 was unchanged at both captured top-ups; this does not mean kiosks never
 update it. Sector 8 remained unchanged in this sequence.
+
+### E-ticket cross-reference
+
+Observed in all five available cases (A's S7 before and after the fare, A's S8,
+B's S7 and S8), and asserted by the corpus selftest:
+
+- S7 block 29 bytes 0–3 = an S6 payload word with `0x08` OR-ed into its last byte.
+- S8 block 33 bytes 0–3 = an S5 payload word with `0x80` OR-ed into its last byte.
+
+The source word is payload bytes 12–15 everywhere **except card B's S8**, which
+matches S5 payload bytes **0–3** (`0A284D35 → 0A284DB5`). So an earlier statement
+that S7/S8 simply carry the S6/S5 "session token" was wrong for card B. Why one
+word or the other is referenced is unknown; five cases are not a grammar.
 
 ## Balance research: results and limits
 
@@ -328,7 +351,19 @@ Before/after/amount semantics and a bounded version/presence-bitmap grammar are
 possible follow-up hypotheses, **not completed or successful decodes**. More
 same-slot/same-type observations, another date/card, or an approved format
 specification would provide more discriminating evidence than unconstrained
-searches over the same three amounts.
+searches over the same three amounts. Three known-display states cannot support
+more fitting freedom, so further plaintext-number searches wait for new data.
+
+Discriminating experiments, each a read-only dump before and after with exact
+display and time: a balance inquiry with no transaction (does reading write?);
+two consecutive identical fares (fixed payload bytes, block-28 counter); one fare
+on a different day (does `2032` move?); and one transaction on card B, which has
+no captured transition.
+
+Open question: **are vehicle validators online or offline?** The fare display
+came from a validator. Offline debiting implies the balance is derivable from
+card data plus terminal-held secrets; online validators leave a backend-only
+balance as a live hypothesis.
 
 ZET's [official FAQ](https://www.zet.hr/preuzimanja/odredbe/najcesca-pitanja/391)
 describes an **“i” balance inquiry** on onboard devices and balance checks at
